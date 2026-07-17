@@ -1,0 +1,6 @@
+@Br.MetanoTech.POC_AWS.WebApi_HostAddress = http://localhost:5067
+
+GET {{Br.MetanoTech.POC_AWS.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
