@@ -41,106 +41,60 @@ namespace Br.MetanoTech.Aws.Sdk
             };
         }
 
-        public static async Task<GeneratePresignedUrlMultiPartUploadModel> GeneratePresignedUrlToPutAsync(int totalParts, string contentType)
+        public static async Task<Uri> GeneratePresignedUrlMultipartToPutAsync(string key, string contentType, int partNumberId, string uploadId)
         {
-            GetPreSignedUrlRequest? request = null;
-            List<Uri>? urls = [];
-            string uploadId;
-
-            var key = CreateRandomKey();
+            GetPreSignedUrlRequest? request;
+            Uri? uri = null;
 
             try
             {
-                uploadId = await S3UploadService.InitiateMultipartUploadAsync(key);
-
-                for (int partNumberId = 1; partNumberId <= totalParts; partNumberId++)
+                request = new GetPreSignedUrlRequest
                 {
-                    request = new GetPreSignedUrlRequest
-                    {
-                        BucketName = bucketName,
-                        Key = key,
-                        Verb = HttpVerb.PUT,
-                        UploadId = uploadId,
-                        PartNumber = partNumberId,
-                        Expires = DateTime.Now.AddMinutes(5),
-                        ContentType = contentType
-                    };
-                    var url = await client.GetPreSignedURLAsync(request);
+                    Key = key,
+                    UploadId = uploadId,
+                    BucketName = bucketName,
+                    ContentType = contentType,
+                    Verb = HttpVerb.PUT,
+                    PartNumber = partNumberId,
+                    Expires = DateTime.Now.AddMinutes(5)
+                };
+                var url = await client.GetPreSignedURLAsync(request);
 
-                    if (Uri.TryCreate(url, UriKind.Absolute, out Uri myUri))
-                        urls.Add(myUri);
-                }
+                if (Uri.TryCreate(url, UriKind.Absolute, out Uri? myUri))
+                    uri = myUri;
             }
             catch (AmazonS3Exception ex)
             {
                 Console.WriteLine($"Error:'{ex.Message}'");
                 throw;
             }
-
-            return new GeneratePresignedUrlMultiPartUploadModel
-            {
-                UploadId = uploadId,
-                Key = request!.Key,
-                Urls = urls
-            };
+            return uri;
         }
 
-        public static async Task<UploadMultipartResponse> UploadFileAsync(string filePath, int partSize, int maxConcurrency = 30)
-            => await S3UploadService.UploadAsync(filePath, partSize, maxConcurrency);
+        public static async Task<UploadMultipartResponse> UploadFileAsync(string filePath, int partSize, CancellationToken cancellationToken)
+            => await S3UploadService.UploadAsync(filePath, partSize, cancellationToken);
 
-        public static async Task<UploadMultipartResponse> UploadFileStreamAsync(Stream stream, int partSize)
-            => await S3UploadService.UploadFileStreamAsync(stream, partSize, CreateRandomKey());
+        public static async Task<UploadMultipartResponse> UploadFileStreamAsync(Stream stream, int partSize, CancellationToken cancellationToken)
+            => await S3UploadService.UploadFileStreamAsync(stream, partSize, cancellationToken);
 
-        public static async Task<UploadResponse> UploadViaPresignedUrl(string url, string filePath, string key)
-            => await S3UploadService.UploadViaPresignedUrl(url, filePath, key);
+        public static async Task<UploadResponse> UploadViaPresignedUrl(string url, string filePath, CancellationToken cancellationToken)
+            => await S3UploadService.UploadViaPresignedUrl(url, filePath, cancellationToken);
 
-        public static async Task<UploadResponse> UploadBase64ViaPresignedUrl(string url, string base64Content, string key)
-            => await S3UploadService.UploadBase64ViaPresignedUrl(url, base64Content, key);
+        public static async Task<UploadResponse> UploadBase64ViaPresignedUrl(string url, string base64Content, CancellationToken cancellationToken)
+            => await S3UploadService.UploadBase64ViaPresignedUrl(url, base64Content, cancellationToken);
 
-        public static async Task<CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(CompleteMultipartUploadRequest request)
-            => await S3UploadService.CompleteMultipartUploadAsync(request);
+        public static async Task<DeleteObjectResponse> DeleteObjectAsync(string key, CancellationToken cancellationToken) 
+            => await client.DeleteObjectAsync(bucketName, key, cancellationToken);
 
-        public static async Task<AbortMultipartResponseModel> AbortMultipartUploadAsync(string key, string uploadId)
-            => await S3UploadService.AbortMultipartUploadAsync(key, uploadId);
+        public static async Task<CompleteMultipartUploadResponse> CompleteMultipartUploadAsync(CompleteMultipartUploadRequest request, CancellationToken cancellationToken)
+            => await S3UploadService.CompleteMultipartUploadAsync(request, cancellationToken);
 
-        internal static string CreateRandomKey()
-        {
-            var guid = string.Concat(RandomNumber(), Guid.NewGuid().ToString());
+        public static async Task<AbortMultipartResponseModel> AbortMultipartUploadAsync(string key, string uploadId, CancellationToken cancellationToken)
+            => await S3UploadService.AbortMultipartUploadAsync(key, uploadId, cancellationToken);
 
-            var newGuid = Shuffle(guid);
+        public static async Task<string> InitiateMultipartUploadAsync(string key, CancellationToken cancellationToken)
+            => await S3UploadService.InitiateMultipartUploadAsync(key, cancellationToken);
 
-            return newGuid;
-        }
-
-        internal static string RandomNumber()
-        {
-            Random random = new();
-
-            char[] chars = new char[6];
-
-            for (int i = 0; i < 6; i++)
-            {
-                chars[i] = (char)('0' + random.Next(0, 6));
-            }
-            return new string(chars);
-        }
-
-        internal static string Shuffle(string value)
-        {
-            Random random = new();
-
-            if (string.IsNullOrEmpty(value)) return value;
-
-            var array = value.ToCharArray();
-            int n = array.Length;
-
-            for (int i = n - 1; i > 0; i--)
-            {
-                int j = random.Next(i + 1);
-                (array[i], array[j]) = (array[j], array[i]);
-            }
-            return new string(array);
-        }
 
         //Client
         public static async Task<GeneratePresignedUrlClientResponseModel> GeneratePresignedUrlToPutClientAsync(GenerateUploadUrlClientRequest request)
@@ -191,10 +145,51 @@ namespace Br.MetanoTech.Aws.Sdk
             };
         }
 
-        public static async Task<IReadOnlyList<UploadResponse>> UploadViaPresignedUrlClient(UploadFileViaUrlClientRequest request)
-            => await S3UploadService.UploadViaPresignedUrlClient(request);
+        public static async Task<IReadOnlyList<UploadResponse>> UploadViaPresignedUrlClient(UploadFileViaUrlClientRequest request, CancellationToken cancellationToken)
+            => await S3UploadService.UploadViaPresignedUrlClient(request, cancellationToken);
 
-        public static async Task<ConfirmUploadResponse> ConfirmUpload(ConfirmUploadClientRequest request)
-            => await S3UploadService.ConfirmUpload(request);
+        public static async Task<ConfirmUploadResponse> ConfirmUpload(ConfirmUploadClientRequest request, CancellationToken cancellationToken)
+            => await S3UploadService.ConfirmUpload(request, cancellationToken);
+
+
+
+        internal static string CreateRandomKey()
+        {
+            var guid = string.Concat(RandomNumber(), Guid.NewGuid().ToString());
+
+            var newGuid = Shuffle(guid);
+
+            return newGuid;
+        }
+
+        internal static string RandomNumber()
+        {
+            Random random = new();
+
+            char[] chars = new char[6];
+
+            for (int i = 0; i < 6; i++)
+            {
+                chars[i] = (char)('0' + random.Next(0, 6));
+            }
+            return new string(chars);
+        }
+
+        internal static string Shuffle(string value)
+        {
+            Random random = new();
+
+            if (string.IsNullOrEmpty(value)) return value;
+
+            var array = value.ToCharArray();
+            int n = array.Length;
+
+            for (int i = n - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (array[i], array[j]) = (array[j], array[i]);
+            }
+            return new string(array);
+        }
     }
 }

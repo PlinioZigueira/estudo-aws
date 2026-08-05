@@ -14,7 +14,5 @@
         /// Url pré-assinada S3 para realizar upload
         /// </summary>
         public required string Url { get; set; }
-
-        public required string Key { get; set; }
     }
 }

@@ -25,11 +25,11 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         }
 
         [HttpGet("CreateMultipartUploadUrl")]
-        public async Task<IActionResult> CreateMultipartUploadUrl(int totalParts, string contentType)
+        public async Task<IActionResult> CreateMultipartUploadUrl(string key, string contentType, int partNumberId, string uploadId)
         {
             try
             {
-                return Ok(await S3Services.GeneratePresignedUrlToPutAsync(totalParts, contentType));
+                return Ok(await S3Services.GeneratePresignedUrlMultipartToPutAsync(key, contentType, partNumberId, uploadId));
             }
             catch (Exception ex)
             {
@@ -41,14 +41,14 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         //[RequestSizeLimit(4294967296)] // Libera o tamanho total da requisição (4 GB em bytes)
         //[RequestFormLimits(MultipartBodyLengthLimit = 4294967296)] // Libera o tamanho do arquivo no Form
         [HttpPut("upload/file")]
-        public async Task<IActionResult> UploadFile([FromBody] UploadFilePathRequest request)
+        public async Task<IActionResult> UploadFile([FromBody] UploadFilePathRequest request, CancellationToken cancellationToken)
         {
             try
             {
                 if (request.PartSize > 500)
                     return BadRequest(new UploadMultipartResponse("O limite de tamanho de cada parte em que o arquivo pode ser dividido é de 500MB", HttpStatusCode.BadRequest));
 
-               return Ok(await S3Services.UploadFileAsync(request.FilePath, request.PartSize));
+                return Ok(await S3Services.UploadFileAsync(request.FilePath, request.PartSize, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -60,7 +60,7 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         //[RequestSizeLimit(4294967296)] // Libera o tamanho total da requisição (4 GB em bytes)
         //[RequestFormLimits(MultipartBodyLengthLimit = 4294967296)] // Libera o tamanho do arquivo no Form
         [HttpPut("upload/file/stream")]
-        public async Task<IActionResult> UploadFileStreamAsync([FromQuery] int partSize)
+        public async Task<IActionResult> UploadFileStreamAsync([FromQuery] int partSize, CancellationToken cancellationToken)
         {
             try
             {
@@ -68,46 +68,46 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
                     return BadRequest(new UploadMultipartResponse("O limite de tamanho de cada parte em que o arquivo pode ser dividido é de 500MB", HttpStatusCode.BadRequest));
 
                 Stream stream = Request.Body;
-                return Ok(await S3Services.UploadFileStreamAsync(stream, partSize));
+                return Ok(await S3Services.UploadFileStreamAsync(stream, partSize, cancellationToken));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                throw new Exception(ex.Message);
             }
         }
 
         [HttpPut("upload/presigned/file")]
-        public async Task<IActionResult> UploadViaPresignedUrl([FromBody] UploadFileViaUrlRequest request)
+        public async Task<IActionResult> UploadViaPresignedUrl([FromBody] UploadFileViaUrlRequest request, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await S3Services.UploadViaPresignedUrl(request.Url, request.FilePath, request.Key));
+                return Ok(await S3Services.UploadViaPresignedUrl(request.Url, request.FilePath, cancellationToken));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                throw new Exception(ex.Message);
             }
         }
 
         [HttpPut("upload/presigned/base64")]
-        public async Task<ActionResult<UploadResponse>> UploadBase64ViaPresignedUrl([FromBody] UploadBase64Request request)
+        public async Task<ActionResult<UploadResponse>> UploadBase64ViaPresignedUrl([FromBody] UploadBase64Request request, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await S3Services.UploadBase64ViaPresignedUrl(request.Url, request.Base64Content, request.Key));
+                return Ok(await S3Services.UploadBase64ViaPresignedUrl(request.Url, request.Base64Content, cancellationToken));
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                throw new Exception(ex.Message);
             }
         }
 
         [HttpPut("CompleteMultipartUpload")]
-        public async Task<IActionResult> CompleteMultipartUpload([FromBody] CompleteMultipartUploadRequest request)
+        public async Task<IActionResult> CompleteMultipartUpload([FromBody] CompleteMultipartUploadRequest request, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await S3Services.CompleteMultipartUploadAsync(request));
+                return Ok(await S3Services.CompleteMultipartUploadAsync(request, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -116,11 +116,24 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         }
 
         [HttpPut("AbortMultipartUpload")]
-        public async Task<IActionResult> AbortMultipartUpload(string key, string uploadId)
+        public async Task<IActionResult> AbortMultipartUpload(string key, string uploadId, CancellationToken cancellationToken)
         {
             try
             {
-                return Ok(await S3Services.AbortMultipartUploadAsync(key, uploadId));
+                return Ok(await S3Services.AbortMultipartUploadAsync(key, uploadId, cancellationToken));
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+
+        [HttpDelete("DeleteObject")]
+        public async Task<IActionResult> DeleteObject(string key, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return Ok(await S3Services.DeleteObjectAsync(key, cancellationToken));
             }
             catch (Exception ex)
             {
@@ -146,11 +159,11 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         }
         
         [HttpPut("UploadViaPresignedClientUrl")]
-        public async Task<IActionResult> UploadViaPresignedClientUrl([FromBody] UploadFileViaUrlClientRequest request)
+        public async Task<IActionResult> UploadViaPresignedClientUrl([FromBody] UploadFileViaUrlClientRequest request, CancellationToken cancellationToken)
         {
             try
             {
-                var res = await S3Services.UploadViaPresignedUrlClient(request);
+                var res = await S3Services.UploadViaPresignedUrlClient(request, cancellationToken);
 
                 return Ok(res);
             }
@@ -161,11 +174,11 @@ namespace Br.MetanoTech.POC_AWS.WebApi.Controllers
         }
 
         [HttpPut("ConfirmUpload")]
-        public async Task<IActionResult> ConfirmUploadClient([FromBody] ConfirmUploadClientRequest request)
+        public async Task<IActionResult> ConfirmUploadClient([FromBody] ConfirmUploadClientRequest request, CancellationToken cancellationToken)
         {
             try
             {
-               return Ok(await S3Services.ConfirmUpload(request));
+               return Ok(await S3Services.ConfirmUpload(request, cancellationToken));
             }
             catch (Exception ex)
             {
