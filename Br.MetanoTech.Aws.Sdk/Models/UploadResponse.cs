@@ -7,16 +7,13 @@ namespace Br.MetanoTech.Aws.Sdk.Models
         public UploadResponse() { }
 
         [SetsRequiredMembers]
-        public UploadResponse(string message, string statusCode, string key)
-
-        {
-            Key = key;
+        public UploadResponse(string message, string statusCode)
+        {   
             Message = message;
             StatusCode = statusCode;
         }
-
-        public required string Key { get; set; }
-        public string StatusCode { get; set; }
+        
+        public required string StatusCode { get; set; }
         public required string? Message { get; set; }
         public ErrorUploadResponse? Error { get; set; }
     }

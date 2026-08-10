@@ -18,8 +18,6 @@ namespace Br.MetanoTech.Aws.Sdk
         private static readonly HttpClient _httpClient = new();
         private static readonly string bucketName = "dev-lab-local";
 
-
-
         internal static async Task<UploadMultipartResponse> UploadAsync(string filePath, int partSize, CancellationToken cancellationToken)
         {
             var key = S3Services.CreateRandomKey();
@@ -122,8 +120,6 @@ namespace Br.MetanoTech.Aws.Sdk
 
         internal static async Task<UploadResponse> UploadViaPresignedUrl(string url, string filePath, CancellationToken cancellationToken)
         {
-            var key = S3Services.CreateRandomKey();
-
             using var streamContent = await FileUtilities.ConvertFileToStreamAsync(filePath);
             var httpClientResult = await _httpClient.PutAsync(url, streamContent, cancellationToken);
 
@@ -132,7 +128,7 @@ namespace Br.MetanoTech.Aws.Sdk
                 var message = await httpClientResult.Content.ReadAsStringAsync(cancellationToken);
 
                 if (message is null)
-                    return new UploadResponse("Erro ao realizar upload para S3. Detalhes não informado", HttpStatusCode.BadRequest.ToString(), key);
+                    return new UploadResponse("Erro ao realizar upload para S3. Detalhes não informado", HttpStatusCode.BadRequest.ToString());
 
                 XmlSerializer serializer = new(typeof(ErrorUploadResponse));
                 using StringReader reader = new(message);
@@ -143,18 +139,15 @@ namespace Br.MetanoTech.Aws.Sdk
                 {
                     Message = resultHttpClientS3?.Message,
                     Error = resultHttpClientS3,
-                    StatusCode = resultHttpClientS3?.Code ?? "",
-                    Key = key
+                    StatusCode = resultHttpClientS3?.Code ?? ""
                 };
             }
             else
-                return new UploadResponse("Upload realizado com sucesso!", httpClientResult.StatusCode.ToString(), key);
+                return new UploadResponse("Upload realizado com sucesso!", httpClientResult.StatusCode.ToString());
         }
 
         internal static async Task<UploadResponse> UploadBase64ViaPresignedUrl(string url, string base64Content, CancellationToken cancellationToken)
         {
-            var key = S3Services.CreateRandomKey();
-
             var contentType = FileUtilities.GetContentTypeFromBase64(base64Content)
                 ?? throw new ArgumentException("Formato do arquivo (MIME) não reconhecido.");
 
@@ -173,7 +166,7 @@ namespace Br.MetanoTech.Aws.Sdk
                 var message = await httpClientResult.Content.ReadAsStringAsync();
 
                 if (message is null)
-                    return new UploadResponse("Erro ao realizar upload para S3. Detalhes não informado", HttpStatusCode.BadRequest.ToString(), key);
+                    return new UploadResponse("Erro ao realizar upload para S3. Detalhes não informado", HttpStatusCode.BadRequest.ToString());
 
                 XmlSerializer serializer = new(typeof(ErrorUploadResponse));
                 using StringReader reader = new(message);
@@ -184,12 +177,11 @@ namespace Br.MetanoTech.Aws.Sdk
                 {
                     Message = resultHttpClientS3?.Message,
                     Error = resultHttpClientS3,
-                    StatusCode = resultHttpClientS3?.Code ?? "",
-                    Key = key
+                    StatusCode = resultHttpClientS3?.Code ?? ""
                 };
             }
             else
-                return new UploadResponse("Upload realizado com sucesso!", httpClientResult.StatusCode.ToString(), key);
+                return new UploadResponse("Upload realizado com sucesso!", httpClientResult.StatusCode.ToString());
         }
 
         internal static async Task<ConfirmUploadResponse> ConfirmUpload(ConfirmUploadClientRequest request, CancellationToken cancellationToken)

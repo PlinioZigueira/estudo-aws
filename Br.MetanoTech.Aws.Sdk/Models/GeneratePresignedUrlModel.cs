@@ -2,7 +2,8 @@
 {
     public class GeneratePresignedUrlModel
     {
-        public string Key { get; set; } = string.Empty;
-        public string Url { get; set; } = string.Empty;
+        public required string Key { get; set; } = string.Empty;
+        public required string Url { get; set; } = string.Empty;
+        public required DateTime ExpiresAt { get; set; }
     }
 }

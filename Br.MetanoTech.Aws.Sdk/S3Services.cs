@@ -15,6 +15,7 @@ namespace Br.MetanoTech.Aws.Sdk
         public static async Task<GeneratePresignedUrlModel> GeneratePresignedUrlToPutAsync()
         {
             GetPreSignedUrlRequest? request;
+            var expires = DateTime.UtcNow.AddMinutes(5);
             string url;
 
             try
@@ -24,7 +25,7 @@ namespace Br.MetanoTech.Aws.Sdk
                     BucketName = bucketName,
                     Key = CreateRandomKey(),
                     Verb = HttpVerb.PUT,
-                    Expires = DateTime.Now.AddMinutes(5)
+                    Expires = expires
                 };
                 url = await client.GetPreSignedURLAsync(request);
             }
@@ -37,7 +38,8 @@ namespace Br.MetanoTech.Aws.Sdk
             return new GeneratePresignedUrlModel
             {
                 Key = request!.Key,
-                Url = url
+                Url = url,
+                ExpiresAt = expires
             };
         }
 
@@ -150,7 +152,6 @@ namespace Br.MetanoTech.Aws.Sdk
 
         public static async Task<ConfirmUploadResponse> ConfirmUpload(ConfirmUploadClientRequest request, CancellationToken cancellationToken)
             => await S3UploadService.ConfirmUpload(request, cancellationToken);
-
 
 
         internal static string CreateRandomKey()
