@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Br.MetanoTech.POC_AWS.WebApi</RootNamespace>
+    <RootNamespace>Br.MetanoTech.Laboratory.Aws.WebApi</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
